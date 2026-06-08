@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mini Town Sim</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #14181b;
+      --panel: #20272b;
+      --panel-2: #293136;
+      --line: #3a464c;
+      --text: #eef3ef;
+      --muted: #aebbb2;
+      --grass: #5e9864;
+      --grass-2: #76ad6f;
+      --path: #b69268;
+      --water: #4d8daa;
+      --farm: #8f6a45;
+      --house: #c66b4f;
+      --well: #8ab5c8;
+      --tree: #2f6d42;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 260px 1fr 260px;
+      height: 100vh;
+    }
+
+    aside {
+      background: var(--panel);
+      border-color: var(--line);
+      padding: 16px;
+      overflow: auto;
+    }
+
+    .left {
+      border-right: 1px solid var(--line);
+    }
+
+    .right {
+      border-left: 1px solid var(--line);
+    }
+
+    h1, h2 {
+      margin: 0;
+      font-weight: 750;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 22px;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+
+    h2 {
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin: 18px 0 8px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+      min-height: 40px;
+      border-radius: 8px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: #6f858d;
+      background: #344047;
+    }
+
+    button.active {
+      border-color: #f1c66f;
+      box-shadow: inset 0 0 0 1px #f1c66f;
+    }
+
+    .tools {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .tool {
+      display: grid;
+      gap: 3px;
+      padding: 8px;
+      text-align: left;
+      min-width: 0;
+    }
+
+    .tool strong {
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tool span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .stats {
+      display: grid;
+      gap: 8px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #1b2125;
+      font-size: 13px;
+    }
+
+    .stat b {
+      font-size: 14px;
+    }
+
+    .main {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      background:
+        radial-gradient(circle at 18% 14%, rgba(255,255,255,.08), transparent 24%),
+        linear-gradient(135deg, #263035, #151b1e 55%, #101416);
+    }
+
+    canvas {
+      width: min(100%, calc(100vh - 28px));
+      height: min(100%, calc(100vw - 548px));
+      max-width: 960px;
+      max-height: 960px;
+      aspect-ratio: 1;
+      image-rendering: pixelated;
+      border: 1px solid #4a585f;
+      background: var(--grass);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+    }
+
+    .topbar {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .message {
+      max-width: min(560px, 80vw);
+      padding: 8px 12px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 8px;
+      background: rgba(20,24,27,.84);
+      color: var(--text);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .row button {
+      flex: 1;
+    }
+
+    .legend {
+      display: grid;
+      gap: 8px;
+    }
+
+    .legend div {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,.25);
+      flex: 0 0 auto;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: 100vh;
+      }
+
+      aside {
+        border: 0;
+      }
+
+      .left, .right {
+        border: 0;
+      }
+
+      .main {
+        min-height: min(100vw, 620px);
+        order: -1;
+        padding: 12px;
+      }
+
+      canvas {
+        width: calc(100vw - 24px);
+        height: calc(100vw - 24px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="left">
+      <h1>Mini Town Sim</h1>
+      <p>Paint a working settlement. Houses bring residents, farms make food, wells and trees improve happiness, and paths connect everything.</p>
+
+      <h2>Build</h2>
+      <div class="tools" id="tools"></div>
+
+      <h2>Actions</h2>
+      <div class="row">
+        <button id="pause">Pause</button>
+        <button id="reset">Reset</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="message" id="message">Select a tool, then click tiles to build. Villagers prefer connected houses, food, water, and shade.</div>
+      </div>
+      <canvas id="game" width="768" height="768" aria-label="Mini Town Sim game board"></canvas>
+    </main>
+
+    <aside class="right">
+      <h2>Town</h2>
+      <div class="stats">
+        <div class="stat"><span>Day</span><b id="day">1</b></div>
+        <div class="stat"><span>Residents</span><b id="residents">0</b></div>
+        <div class="stat"><span>Food</span><b id="food">20</b></div>
+        <div class="stat"><span>Wood</span><b id="wood">40</b></div>
+        <div class="stat"><span>Stone</span><b id="stone">28</b></div>
+        <div class="stat"><span>Happiness</span><b id="happy">50%</b></div>
+      </div>
+
+      <h2>Legend</h2>
+      <div class="legend">
+        <div><span class="swatch" style="background: var(--house)"></span>House: +2 residents</div>
+        <div><span class="swatch" style="background: var(--farm)"></span>Farm: grows food</div>
+        <div><span class="swatch" style="background: var(--well)"></span>Well: boosts happiness</div>
+        <div><span class="swatch" style="background: var(--path)"></span>Path: connects buildings</div>
+        <div><span class="swatch" style="background: var(--tree)"></span>Tree: wood and shade</div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const canvas = document.querySelector("#game");
+    const ctx = canvas.getContext("2d");
+    const toolsEl = document.querySelector("#tools");
+    const messageEl = document.querySelector("#message");
+    const pauseBtn = document.querySelector("#pause");
+    const resetBtn = document.querySelector("#reset");
+
+    const size = 24;
+    const tile = canvas.width / size;
+    const terrain = ["grass", "grass2", "water"];
+    const buildTools = [
+      { id: "path", label: "Path", cost: { stone: 1 }, note: "1 stone" },
+      { id: "house", label: "House", cost: { wood: 8, stone: 3 }, note: "8 wood, 3 stone" },
+      { id: "farm", label: "Farm", cost: { wood: 4 }, note: "4 wood" },
+      { id: "well", label: "Well", cost: { stone: 10 }, note: "10 stone" },
+      { id: "tree", label: "Tree", cost: { food: 3 }, note: "3 food" },
+      { id: "clear", label: "Clear", cost: {}, note: "remove build" }
+    ];
+
+    let selected = "path";
+    let paused = false;
+    let tick = 0;
+    let day = 1;
+    let food = 20;
+    let wood = 40;
+    let stone = 28;
+    let tiles = [];
+    let people = [];
+
+    function rand(seed) {
+      const x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    }
+
+    function makeWorld() {
+      tiles = [];
+      people = [];
+      tick = 0;
+      day = 1;
+      food = 20;
+      wood = 40;
+      stone = 28;
+
+      for (let y = 0; y < size; y++) {
+        const row = [];
+        for (let x = 0; x < size; x++) {
+          const edge = Math.min(x, y, size - 1 - x, size - 1 - y);
+          const noise = rand(x * 19.31 + y * 61.7);
+          const base = edge < 2 && noise > .35 ? "water" : noise > .74 ? "grass2" : "grass";
+          row.push({ terrain: base, build: null, growth: Math.floor(noise * 4) });
+        }
+        tiles.push(row);
+      }
+
+      for (let x = 9; x <= 14; x++) tiles[12][x].build = "path";
+      tiles[11][10].build = "house";
+      tiles[13][14].build = "farm";
+      tiles[10][15].build = "well";
+      tiles[8][7].build = "tree";
+      tiles[16][16].build = "tree";
+      people.push(newPerson(10, 11), newPerson(11, 11));
+      setMessage("A tiny settlement is started. Add houses, farms, wells, trees, and paths.");
+      updateStats();
+    }
+
+    function newPerson(x, y) {
+      return {
+        x: x + .5,
+        y: y + .5,
+        tx: x + .5,
+        ty: y + .5,
+        hue: Math.floor(20 + Math.random() * 45)
+      };
+    }
+
+    function countBuild(type) {
+      let count = 0;
+      forEachTile(t => {
+        if (t.build === type) count++;
+      });
+      return count;
+    }
+
+    function forEachTile(fn) {
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) fn(tiles[y][x], x, y);
+      }
+    }
+
+    function residentsCap() {
+      return countBuild("house") * 2;
+    }
+
+    function happiness() {
+      const houses = countBuild("house");
+      const farms = countBuild("farm");
+      const wells = countBuild("well");
+      const trees = countBuild("tree");
+      const paths = countBuild("path");
+      const foodScore = Math.min(24, food);
+      const serviceScore = Math.min(22, wells * 8 + trees * 2);
+      const networkScore = houses ? Math.min(24, Math.round(paths / houses * 5)) : 0;
+      const crowdPenalty = Math.max(0, people.length - houses * 2) * 8;
+      const farmScore = Math.min(18, farms * 4);
+      return Math.max(5, Math.min(99, 25 + foodScore + serviceScore + networkScore + farmScore - crowdPenalty));
+    }
+
+    function canPay(cost) {
+      return Object.entries(cost).every(([key, value]) => ({ food, wood, stone })[key] >= value);
+    }
+
+    function pay(cost) {
+      food -= cost.food || 0;
+      wood -= cost.wood || 0;
+      stone -= cost.stone || 0;
+    }
+
+    function refund(build) {
+      if (build === "tree") wood += 2;
+      if (build === "path") stone += 1;
+    }
+
+    function setMessage(text) {
+      messageEl.textContent = text;
+    }
+
+    function updateStats() {
+      document.querySelector("#day").textContent = day;
+      document.querySelector("#residents").textContent = `${people.length}/${residentsCap()}`;
+      document.querySelector("#food").textContent = Math.floor(food);
+      document.querySelector("#wood").textContent = Math.floor(wood);
+      document.querySelector("#stone").textContent = Math.floor(stone);
+      document.querySelector("#happy").textContent = `${happiness()}%`;
+    }
+
+    function buildAt(x, y) {
+      const cell = tiles[y]?.[x];
+      if (!cell || cell.terrain === "water") {
+        setMessage("You cannot build in water.");
+        return;
+      }
+
+      if (selected === "clear") {
+        if (cell.build) {
+          refund(cell.build);
+          cell.build = null;
+          setMessage("Tile cleared.");
+          updateStats();
+        }
+        return;
+      }
+
+      const tool = buildTools.find(t => t.id === selected);
+      if (!tool || cell.build) {
+        setMessage(cell.build ? "Clear this tile before placing something else." : "Choose a build tool.");
+        return;
+      }
+
+      if (!canPay(tool.cost)) {
+        setMessage(`Not enough resources for ${tool.label.toLowerCase()}.`);
+        return;
+      }
+
+      pay(tool.cost);
+      cell.build = selected;
+      if (selected === "house") {
+        const cap = residentsCap();
+        while (people.length < cap && people.length < cap - 1 + Math.round(happiness() / 60)) {
+          people.push(newPerson(x, y));
+        }
+      }
+      setMessage(`${tool.label} placed.`);
+      updateStats();
+    }
+
+    function drawTile(x, y, cell) {
+      const px = x * tile;
+      const py = y * tile;
+      const colors = {
+        grass: "#5e9864",
+        grass2: "#76ad6f",
+        water: "#4d8daa"
+      };
+      ctx.fillStyle = colors[cell.terrain];
+      ctx.fillRect(px, py, tile, tile);
+      ctx.strokeStyle = "rgba(20,30,20,.14)";
+      ctx.strokeRect(px, py, tile, tile);
+
+      if (cell.build === "path") {
+        ctx.fillStyle = "#b69268";
+        ctx.fillRect(px + 3, py + 3, tile - 6, tile - 6);
+      }
+
+      if (cell.build === "farm") {
+        ctx.fillStyle = "#8f6a45";
+        ctx.fillRect(px + 4, py + 4, tile - 8, tile - 8);
+        ctx.strokeStyle = "#d2b36f";
+        for (let i = 9; i < tile; i += 8) {
+          ctx.beginPath();
+          ctx.moveTo(px + i, py + 5);
+          ctx.lineTo(px + i - 4, py + tile - 5);
+          ctx.stroke();
+        }
+      }
+
+      if (cell.build === "house") {
+        ctx.fillStyle = "#8d4034";
+        ctx.fillRect(px + 5, py + 10, tile - 10, tile - 8);
+        ctx.fillStyle = "#c66b4f";
+        ctx.beginPath();
+        ctx.moveTo(px + 4, py + 11);
+        ctx.lineTo(px + tile / 2, py + 4);
+        ctx.lineTo(px + tile - 4, py + 11);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#f0d398";
+        ctx.fillRect(px + 13, py + 15, 6, 9);
+      }
+
+      if (cell.build === "well") {
+        ctx.fillStyle = "#6c7f8a";
+        ctx.fillRect(px + 8, py + 9, tile - 16, tile - 8);
+        ctx.fillStyle = "#8ab5c8";
+        ctx.beginPath();
+        ctx.arc(px + tile / 2, py + tile / 2 + 2, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (cell.build === "tree") {
+        ctx.fillStyle = "#704c35";
+        ctx.fillRect(px + 13, py + 15, 6, 10);
+        ctx.fillStyle = "#2f6d42";
+        ctx.beginPath();
+        ctx.arc(px + 16, py + 11, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#3e8b4f";
+        ctx.beginPath();
+        ctx.arc(px + 11, py + 14, 7, 0, Math.PI * 2);
+        ctx.arc(px + 21, py + 15, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawPeople() {
+      for (const p of people) {
+        const px = p.x * tile;
+        const py = p.y * tile;
+        ctx.fillStyle = `hsl(${p.hue} 72% 58%)`;
+        ctx.beginPath();
+        ctx.arc(px, py, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#241a16";
+        ctx.fillRect(px - 2, py - 1, 4, 5);
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      forEachTile((cell, x, y) => drawTile(x, y, cell));
+      drawPeople();
+    }
+
+    function randomBuildTile(types) {
+      const matches = [];
+      forEachTile((cell, x, y) => {
+        if (types.includes(cell.build)) matches.push([x, y]);
+      });
+      return matches[Math.floor(Math.random() * matches.length)] || [12, 12];
+    }
+
+    function updatePeople() {
+      for (const p of people) {
+        const dx = p.tx - p.x;
+        const dy = p.ty - p.y;
+        if (Math.hypot(dx, dy) < .04) {
+          const [x, y] = randomBuildTile(["path", "farm", "well", "tree", "house"]);
+          p.tx = x + .5;
+          p.ty = y + .5;
+        } else {
+          p.x += dx * .025;
+          p.y += dy * .025;
+        }
+      }
+    }
+
+    function simulateDay() {
+      day++;
+      const farms = countBuild("farm");
+      const houses = countBuild("house");
+      const trees = countBuild("tree");
+      food += farms * 5 - people.length;
+      wood += Math.max(1, Math.floor(trees / 2));
+      stone += Math.max(1, Math.floor(countBuild("path") / 10));
+
+      const happy = happiness();
+      if (happy > 62 && people.length < houses * 2 && food > people.length) {
+        people.push(newPerson(...randomBuildTile(["house"])));
+        setMessage("A new resident moved in.");
+      } else if (food < 0 && people.length > 0) {
+        people.pop();
+        food = 0;
+        setMessage("Food ran out and a resident left.");
+      } else {
+        setMessage(`Day ${day}: farms produced, residents ate, and the town kept moving.`);
+      }
+
+      updateStats();
+    }
+
+    function loop() {
+      if (!paused) {
+        tick++;
+        updatePeople();
+        if (tick % 720 === 0) simulateDay();
+      }
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function renderTools() {
+      toolsEl.innerHTML = "";
+      for (const tool of buildTools) {
+        const button = document.createElement("button");
+        button.className = `tool${tool.id === selected ? " active" : ""}`;
+        button.innerHTML = `<strong>${tool.label}</strong><span>${tool.note}</span>`;
+        button.addEventListener("click", () => {
+          selected = tool.id;
+          document.querySelectorAll(".tool").forEach(el => el.classList.remove("active"));
+          button.classList.add("active");
+          setMessage(`${tool.label} selected.`);
+        });
+        toolsEl.appendChild(button);
+      }
+    }
+
+    canvas.addEventListener("click", event => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = Math.floor((event.clientX - rect.left) * scaleX / tile);
+      const y = Math.floor((event.clientY - rect.top) * scaleY / tile);
+      buildAt(x, y);
+    });
+
+    pauseBtn.addEventListener("click", () => {
+      paused = !paused;
+      pauseBtn.textContent = paused ? "Resume" : "Pause";
+      setMessage(paused ? "Simulation paused." : "Simulation resumed.");
+    });
+
+    resetBtn.addEventListener("click", () => {
+      makeWorld();
+      renderTools();
+    });
+
+    makeWorld();
+    renderTools();
+    loop();
+  </script>
+</body>
+</html>
